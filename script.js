@@ -185,24 +185,46 @@ resetBtn.addEventListener('click', () => {
 
 
 // 6. INFERENCE CORE
+// 6. INFERENCE CORE
+
 async function preprocessImage(imageSource) {
-    const width = 224, height = 224;
+    const targetDim = 224; // Model expects 224x224
     const canvas = document.createElement('canvas');
-    canvas.width = width; canvas.height = height;
+    canvas.width = targetDim; 
+    canvas.height = targetDim;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(imageSource, 0, 0, width, height);
-    const imageData = ctx.getImageData(0, 0, width, height).data;
-    
+
+    // 1. Determine Source Dimensions
+    // Video elements use videoWidth/videoHeight, Images use naturalWidth/naturalHeight
+    const srcWidth = imageSource.videoWidth || imageSource.naturalWidth;
+    const srcHeight = imageSource.videoHeight || imageSource.naturalHeight;
+
+    // 2. Calculate "Center Crop"
+    // We want the largest square possible from the center of the image/video
+    const size = Math.min(srcWidth, srcHeight);
+    const startX = (srcWidth - size) / 2;
+    const startY = (srcHeight - size) / 2;
+
+    // 3. Draw cropped image to canvas
+    // ctx.drawImage(source, srcX, srcY, srcWidth, srcHeight, destX, destY, destW, destH)
+    ctx.drawImage(imageSource, startX, startY, size, size, 0, 0, targetDim, targetDim);
+
+    // 4. Convert to Tensor (Standard Normalization)
+    const imageData = ctx.getImageData(0, 0, targetDim, targetDim).data;
     const mean = [0.485, 0.456, 0.406];
     const std = [0.229, 0.224, 0.225];
-    const float32Data = new Float32Array(3 * width * height);
+    const float32Data = new Float32Array(3 * targetDim * targetDim);
     
-    for (let i = 0; i < width * height; i++) {
+    for (let i = 0; i < targetDim * targetDim; i++) {
+        // Red
         float32Data[i] = ((imageData[i * 4] / 255) - mean[0]) / std[0];
-        float32Data[i + width * height] = ((imageData[i * 4 + 1] / 255) - mean[1]) / std[1];
-        float32Data[i + 2 * width * height] = ((imageData[i * 4 + 2] / 255) - mean[2]) / std[2];
+        // Green
+        float32Data[i + targetDim * targetDim] = ((imageData[i * 4 + 1] / 255) - mean[1]) / std[1];
+        // Blue
+        float32Data[i + 2 * targetDim * targetDim] = ((imageData[i * 4 + 2] / 255) - mean[2]) / std[2];
     }
-    return new ort.Tensor('float32', float32Data, [1, 3, width, height]);
+    
+    return new ort.Tensor('float32', float32Data, [1, 3, targetDim, targetDim]);
 }
 
 async function runInference(imageSource) {
@@ -221,16 +243,36 @@ function softmax(arr) {
     return arr.map(val => Math.exp(val) / arr.map(Math.exp).reduce((a, b) => a + b));
 }
 
+// Updated UpdateUI Function in script.js
+
 function updateUI(classIdx, confidence, time) {
     const label = LABELS[classIdx];
-    resultOverlay.classList.remove('hidden');
-    document.getElementById('pred-label').innerText = label.name;
-    document.getElementById('pred-code').innerText = label.code;
-    predModel.innerText = currentModelName;
-    document.getElementById('conf-score').innerText = confidence;
-    document.getElementById('time-taken').innerText = time;
+    const resultOverlay = document.getElementById('result-overlay');
+    const predLabel = document.getElementById('pred-label');
+    const predCode = document.getElementById('pred-code');
+    const predModel = document.getElementById('pred-model');
+    const confScore = document.getElementById('conf-score');
     
-    const title = document.getElementById('pred-label');
-    title.style.color = confidence < 50 ? 'var(--text-sub)' : 'var(--accent-dark)';
-    if(confidence < 50) title.innerText = "Unsure...";
+    resultOverlay.classList.remove('hidden');
+
+    // --- THRESHOLD CHECK ---
+    // If confidence is less than 50%, we consider it "Unknown"
+    if (confidence < 50) {
+        predLabel.innerText = "Scanning...";
+        predLabel.style.color = 'var(--text-sub)'; // Grey color
+        predCode.innerText = "--";
+        
+        // Optional: Hide the overlay slightly or keep it neutral
+        // resultOverlay.classList.add('hidden'); // Uncomment if you want it to disappear completely when unsure
+    } else {
+        // We are confident, show the result
+        predLabel.innerText = label.name;
+        predLabel.style.color = 'var(--accent-dark)'; // Red brand color
+        predCode.innerText = label.code;
+    }
+
+    // Always update stats
+    predModel.innerText = currentModelName;
+    confScore.innerText = confidence;
+    document.getElementById('time-taken').innerText = time;
 }
