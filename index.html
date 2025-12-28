@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SymbolLens</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23A00C30%22 rx=%2220%22/><path fill=%22white%22 d=%22M30 30h40v40H30zM50 20v10M50 70v10M20 50h10M70 50h10%22 stroke=%22white%22 stroke-width=%225%22/></svg>">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <main class="app-container">
+        
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-box">
+                    <i class="fa-solid fa-microchip logo-icon"></i>
+                </div>
+                <div class="title-wrapper">
+                    <h1 class="main-title"><span>Symbol</span><span class="accent-text">Lens</span></h1>
+                    <div class="subtitle-row">Electric Symbol Identifier</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <h3 class="section-title">Input Data</h3>
+                <div class="input-toggle-card card">
+                    <button class="toggle-btn active" onclick="switchTab('camera')" id="btn-cam">
+                        <i class="fa-solid fa-camera"></i> Live
+                    </button>
+                    <div class="divider"></div>
+                    <button class="toggle-btn" onclick="switchTab('upload')" id="btn-upload">
+                        <i class="fa-solid fa-image"></i> Upload
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3 class="section-title">Model Selection</h3>
+                <div class="model-select-card card">
+                    <div class="custom-select-container" id="custom-dropdown">
+                        <div class="select-trigger">
+                            <span id="selected-model-text">MobileNet V3</span>
+                            <div class="select-indicators">
+                                <div id="model-status" class="status-dot" title="Loading..."></div>
+                                <i class="fa-solid fa-chevron-down dropdown-icon"></i>
+                            </div>
+                        </div>
+                        <div class="select-options">
+                            <div class="option" data-value="mobilenet_v3">MobileNet V3</div>
+                            <div class="option" data-value="mnasnet">MNASNet</div>
+                            <div class="option" data-value="googlenet">GoogLeNet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card viewport-card">
+            
+            <div id="camera-view" class="view-mode active">
+                <div class="media-container">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <div class="scanner-overlay">
+                        <div class="scan-box"></div>
+                        <div class="scan-line"></div>
+                    </div>
+                    
+                    <button id="toggle-cam-btn" class="action-btn">
+                        <i class="fa-solid fa-play"></i> Start Camera
+                    </button>
+                </div>
+            </div>
+
+            <div id="upload-view" class="view-mode">
+                <div class="media-container upload-container">
+                    <div class="upload-placeholder" id="drop-area">
+                        <div class="icon-circle">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <p><strong>Tap to Upload</strong></p>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                    <div id="image-wrapper" class="hidden">
+                        <img id="uploaded-image" alt="Preview" />
+                        <button id="reset-upload-btn" class="close-btn">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="result-overlay" class="result-overlay hidden">
+                <div class="result-content">
+                    <div class="result-text">
+                        <h2 id="pred-label">Scanning...</h2>
+                        <div class="badge-row">
+                            <span id="pred-code" class="info-badge">--</span>
+                            <span id="pred-model" class="info-badge">--</span>
+                        </div>
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <i class="fa-solid fa-bullseye"></i> 
+                            <span id="conf-score">--</span>%
+                        </div>
+                        <div class="stat-item">
+                            <i class="fa-solid fa-bolt"></i> 
+                            <span id="time-taken">--</span>ms
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
